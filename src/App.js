@@ -1,12 +1,11 @@
-
-
+// src/App.js
 import React from 'react';
-import LandingPage from './LandingPage';
+import RegisterForm from './RegisterForm';
 
 function App() {
   return (
     <div className="App">
-      <LandingPage />
+      <RegisterForm />
     </div>
   );
 }
