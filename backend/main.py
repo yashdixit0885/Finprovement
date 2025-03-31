@@ -7,6 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
 from pydantic import BaseModel
+from sqlalchemy import ForeignKey
 
 # ----- Database Setup -----
 SQLALCHEMY_DATABASE_URL = "sqlite:///./users.db"  # Using SQLite for simplicity
@@ -17,13 +18,26 @@ Base = declarative_base()
 # ----- Password Hashing Setup -----
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# ----- Database Model -----
+# ====== Database Models =======
+
+# ----- User Model -----
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+
+# ----- Questionnaire Model -----
+
+class Questionnaire(Base):
+    __tablename__ = "questionnaires"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)  # Ideally, use ForeignKey('users.id') in a full implementation
+    investment_goal = Column(String)
+    savings_habit = Column(String)
+    risk_tolerance = Column(String)
+
 
 # Create the database tables
 Base.metadata.create_all(bind=engine)
@@ -41,6 +55,27 @@ class UserResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+    
+class QuestionnaireCreate(BaseModel):
+    user_id: int
+    investment_goal: str
+    savings_habit: str
+    risk_tolerance: str
+
+class QuestionnaireResponse(BaseModel):
+    id: int
+    user_id: int
+    investment_goal: str
+    savings_habit: str
+    risk_tolerance: str
+
+    class Config:
+        orm_mode = True
+
 
 # ----- FastAPI App Initialization -----
 app = FastAPI()
@@ -86,9 +121,24 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return db_user
 
 @app.post("/api/login", response_model=UserResponse)
-def login(user: UserCreate, db: Session = Depends(get_db)):
+def login(user: UserLogin, db: Session = Depends(get_db)):
     # Find the user by email
     db_user = db.query(User).filter(User.email == user.email).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     return db_user
+
+@app.post("/api/questionnaire", response_model=QuestionnaireResponse)
+def create_questionnaire(q: QuestionnaireCreate, db: Session = Depends(get_db)):
+    db_q = Questionnaire(**q.dict())
+    db.add(db_q)
+    db.commit()
+    db.refresh(db_q)
+    return db_q
+
+@app.get("/api/questionnaire/{user_id}", response_model=QuestionnaireResponse)
+def get_questionnaire(user_id: int, db: Session = Depends(get_db)):
+    db_q = db.query(Questionnaire).filter(Questionnaire.user_id == user_id).first()
+    if not db_q:
+        raise HTTPException(status_code=404, detail="Questionnaire not found")
+    return db_q

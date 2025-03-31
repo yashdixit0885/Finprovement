@@ -1,26 +1,25 @@
-// src/RegisterForm.js
+// src/LoginForm.js
 import React, { useState } from 'react';
 import './AuthForms.css';
 
-const RegisterForm = () => {
+const LoginForm = () => {
 const [email, setEmail] = useState("");
-const [username, setUsername] = useState("");
 const [password, setPassword] = useState("");
 const [message, setMessage] = useState("");
 
 const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-    const response = await fetch("http://127.0.0.1:8000/api/register", {
+    const response = await fetch("http://127.0.0.1:8000/api/login", {
         method: "POST",
         headers: {
         "Content-Type": "application/json"
         },
-        body: JSON.stringify({ email, username, password })
+        body: JSON.stringify({ email, password })
     });
     const data = await response.json();
     if (response.ok) {
-        setMessage("Registration successful! Welcome " + data.username);
+        setMessage("Login successful! Welcome back, " + data.username);
     } else {
         setMessage("Error: " + data.detail);
     }
@@ -31,7 +30,7 @@ const handleSubmit = async (e) => {
 
 return (
     <div className="auth-container">
-    <h2>Register</h2>
+    <h2>Login</h2>
     <form onSubmit={handleSubmit}>
         <input 
         type="email" 
@@ -41,24 +40,17 @@ return (
         required 
         />
         <input 
-        type="text" 
-        placeholder="Username" 
-        value={username} 
-        onChange={(e) => setUsername(e.target.value)} 
-        required 
-        />
-        <input 
         type="password" 
         placeholder="Password" 
         value={password} 
         onChange={(e) => setPassword(e.target.value)} 
         required 
         />
-        <button type="submit">Register</button>
+        <button type="submit">Login</button>
     </form>
     {message && <p>{message}</p>}
     </div>
 );
 };
 
-export default RegisterForm;
+export default LoginForm;
