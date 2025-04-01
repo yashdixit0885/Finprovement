@@ -22,12 +22,9 @@ const handleSubmit = async (e) => {
     const data = await response.json();
     if (response.ok) {
         setMessage("Login successful! Welcome back, " + data.username);
-        // Set the authenticated state to true
         setIsAuthenticated(true);
-        // Navigate to the analysis/dashboard page after 2 seconds
-        setTimeout(() => {
-        navigate("/analysis");
-        }, 2000);
+        // Redirect new users to the User Profile page
+        navigate("/user-profile");
     } else {
         setMessage("Error: " + data.detail);
     }
@@ -40,8 +37,20 @@ return (
     <div className="auth-container">
     <h2>Login</h2>
     <form onSubmit={handleSubmit}>
-        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <input 
+        type="email" 
+        placeholder="Email" 
+        value={email} 
+        onChange={(e) => setEmail(e.target.value)} 
+        required 
+        />
+        <input 
+        type="password" 
+        placeholder="Password" 
+        value={password} 
+        onChange={(e) => setPassword(e.target.value)} 
+        required 
+        />
         <button type="submit">Login</button>
     </form>
     {message && <p>{message}</p>}

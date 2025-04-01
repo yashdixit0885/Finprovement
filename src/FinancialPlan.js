@@ -6,18 +6,24 @@ const FinancialPlan = () => {
 const [plan, setPlan] = useState(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState(null);
-const userId = 1; // For testing; in production, get this from the auth context
+const userId = 1; // For testing; replace with authenticated user ID
 
 useEffect(() => {
-    fetch(`http://127.0.0.1:8000/api/financial-plan/${userId}`)
+    // Assume that you have stored analysis data; here we simulate calling the AI endpoint
+    const analysisData = { response: "User's detailed AI analysis report" };
+    fetch("http://127.0.0.1:8000/api/ai-financial-plan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(analysisData)
+    })
     .then(response => {
         if (!response.ok) {
-        throw new Error("Error fetching financial plan");
+        throw new Error("Error fetching AI financial plan");
         }
         return response.json();
     })
     .then(data => {
-        setPlan(data);
+        setPlan(data.response);
         setLoading(false);
     })
     .catch(err => {
@@ -31,22 +37,9 @@ if (error) return <p>Error: {error}</p>;
 
 return (
     <div className="financial-plan-container">
-    <h2>Your Personalized Financial Plan</h2>
+    <h2>Your Personalized Financial Plan (AI-Generated)</h2>
     <section>
-        <h3>Budget Plan</h3>
-        <p>{plan.budget_plan}</p>
-    </section>
-    <section>
-        <h3>Investment Strategy</h3>
-        <p>{plan.investment_strategy}</p>
-    </section>
-    <section>
-        <h3>Retirement Plan</h3>
-        <p>{plan.retirement_plan}</p>
-    </section>
-    <section>
-        <h3>Tax Plan</h3>
-        <p>{plan.tax_plan}</p>
+        <p>{plan}</p>
     </section>
     </div>
 );

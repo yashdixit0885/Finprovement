@@ -1,61 +1,44 @@
 // src/ProgressTracker.js
 import React, { useState, useEffect } from 'react';
-import './ProgressTracker.css'; // We'll create some styles for the progress tracker
+import './ProgressTracker.css';
 
 const ProgressTracker = () => {
-const [recommendations, setRecommendations] = useState([]);
+const [insights, setInsights] = useState(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState(null);
-const userId = 1; // For testing; in a real app, this should come from the authentication context
+const userId = 1; // For testing; replace with authenticated user ID
 
-// Fetch recommendations from the backend
 useEffect(() => {
-    fetch(`http://127.0.0.1:8000/api/recommendations/${userId}`)
-    .then((response) => {
+    // Simulate progress data (e.g., a JSON summary of user's recommendation progress)
+    const progressData = { response: "User's progress data summary" };
+    fetch("http://127.0.0.1:8000/api/ai-progress", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(progressData)
+    })
+    .then(response => {
         if (!response.ok) {
-        throw new Error("Error fetching recommendations");
+        throw new Error("Error fetching AI progress insights");
         }
         return response.json();
     })
-    .then((data) => {
-        setRecommendations(data);
+    .then(data => {
+        setInsights(data.response);
         setLoading(false);
     })
-    .catch((err) => {
+    .catch(err => {
         setError(err.message);
         setLoading(false);
     });
 }, [userId]);
 
-// Calculate progress percentage: number of complete recommendations divided by total recommendations
-const total = recommendations.length;
-const completed = recommendations.filter(rec => rec.status === "complete").length;
-const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-if (loading) {
-    return <p>Loading progress...</p>;
-}
-
-if (error) {
-    return <p>Error: {error}</p>;
-}
+if (loading) return <p>Loading progress insights...</p>;
+if (error) return <p>Error: {error}</p>;
 
 return (
     <div className="progress-tracker-container">
-    <h2>Your Progress</h2>
-    {total === 0 ? (
-        <p>No recommendations available. Complete some recommendations to track progress.</p>
-    ) : (
-        <>
-        <p>{completed} out of {total} recommendations completed ({progressPercent}%).</p>
-        <div className="progress-bar">
-            <div
-            className="progress-fill"
-            style={{ width: `${progressPercent}%` }}
-            ></div>
-        </div>
-        </>
-    )}
+    <h2>Your Progress Insights (AI-Generated)</h2>
+    <p>{insights}</p>
     </div>
 );
 };
