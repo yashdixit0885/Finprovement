@@ -11,6 +11,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
 from pydantic import BaseModel
+from huggingface_hub import InferenceClient
 
 HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
@@ -148,46 +149,77 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 # --- AI Agent Integration using LangChain and Hugging Face ---
-from langchain.llms import HuggingFaceHub
 
-llm = HuggingFaceHub(
-    repo_id="Qwen/QwQ-32B",  # Change to your desired model
-    model_kwargs={"temperature": 0.7},
-    huggingfacehub_api_token=HUGGINGFACE_API_KEY  # Use the key loaded from .env
-)
+client = InferenceClient(provider="hf-inference", token=HUGGINGFACE_API_KEY)
+
+# --- Helper function to extract generated text ---
+def extract_generated_text(result) -> str:
+    # If the result is a simple string, return it.
+    if isinstance(result, str):
+        return result
+    # If it's a dictionary, try to get 'generated_text'.
+    elif isinstance(result, dict):
+        return result.get('generated_text', '')
+    # If it's an iterable (e.g., list) of strings or objects.
+    elif hasattr(result, '__iter__'):
+        texts = []
+        for item in result:
+            if isinstance(item, str):
+                texts.append(item)
+            elif isinstance(item, dict):
+                texts.append(item.get('generated_text', ''))
+            elif hasattr(item, 'generated_text'):
+                texts.append(item.generated_text)
+        return " ".join(texts)
+    # Fallback: convert to string.
+    return str(result)
 
 
 def generate_onboarding_questions(user_profile: str) -> str:
     prompt = (
         f"You are a financial advisor. Based on the following user profile: {user_profile}, "
-        "generate a list of personalized onboarding questions for financial planning."
+        "generate a list of 5-8 key onboarding questions that are essential for conducting a comprehensive financial analysis. "
+        "Ensure that the questions focus solely on understanding the user's current financial situation, goals, "
+        "investment preferences, risk tolerance, and retirement planning. Do NOT include any questions that request sensitive personal information such as Social Security numbers, legal documents, or other PII."
     )
-    response = llm(prompt)
-    return response
+    try:
+        result = client.text_generation(prompt)
+        return extract_generated_text(result)
+    except Exception as e:
+        raise e
 
 def generate_analysis_report(onboarding_data: str) -> str:
     prompt = (
         f"Given the following onboarding data for a financial planning client: {onboarding_data}, "
         "produce a detailed financial analysis report including recommendations."
     )
-    response = llm(prompt)
-    return response
+    try:
+        result = client.text_generation(prompt)
+        return extract_generated_text(result)
+    except Exception as e:
+        raise e
 
 def generate_financial_plan(analysis_data: str) -> str:
     prompt = (
         f"Based on the following financial analysis report: {analysis_data}, "
         "generate a comprehensive financial plan including budget, investment, retirement, and tax strategies."
     )
-    response = llm(prompt)
-    return response
+    try:
+        result = client.text_generation(prompt)
+        return extract_generated_text(result)
+    except Exception as e:
+        raise e
 
 def generate_progress_insights(progress_data: str) -> str:
     prompt = (
         f"Given the user's progress data: {progress_data}, "
         "provide insights and recommendations for improving progress towards their financial goals."
     )
-    response = llm(prompt)
-    return response
+    try:
+        result = client.text_generation(prompt)
+        return extract_generated_text(result)
+    except Exception as e:
+        raise e
 
 # --- API Endpoints ---
 
