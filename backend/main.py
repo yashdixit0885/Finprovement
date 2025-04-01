@@ -38,6 +38,14 @@ class Questionnaire(Base):
     savings_habit = Column(String)
     risk_tolerance = Column(String)
 
+# ----- Recommendation Model -----
+class Recommendation(Base):
+    __tablename__ = "recommendations"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)  # In a full app, use ForeignKey('users.id')
+    description = Column(String)
+    status = Column(String, default="pending")  # Values: "pending", "in_progress", "complete"
+
 
 # Create the database tables
 Base.metadata.create_all(bind=engine)
@@ -83,6 +91,21 @@ class AnalysisResponse(BaseModel):
     risk_score: int
     investment_recommendation: str
 
+class RecommendationCreate(BaseModel):
+    user_id: int
+    description: str
+
+class RecommendationResponse(BaseModel):
+    id: int
+    user_id: int
+    description: str
+    status: str
+
+    class Config:
+        orm_mode = True
+
+class RecommendationUpdate(BaseModel):
+    status: str  # Allow updating the status
 
 
 # ----- FastAPI App Initialization -----
@@ -151,7 +174,33 @@ def get_questionnaire(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Questionnaire not found")
     return db_q
 
-@app.get("/api/analysis/{user_id}", response_model=AnalysisResponse)
+# Create a new recommendation (for testing or admin purposes)
+@app.post("/api/recommendations", response_model=RecommendationResponse)
+def create_recommendation(rec: RecommendationCreate, db: Session = Depends(get_db)):
+    db_rec = Recommendation(**rec.dict())
+    db.add(db_rec)
+    db.commit()
+    db.refresh(db_rec)
+    return db_rec
+
+# Get all recommendations for a user
+@app.get("/api/recommendations/{user_id}", response_model=list[RecommendationResponse])
+def get_recommendations(user_id: int, db: Session = Depends(get_db)):
+    recs = db.query(Recommendation).filter(Recommendation.user_id == user_id).all()
+    return recs
+
+# Update a recommendation's status
+@app.put("/api/recommendations/{rec_id}", response_model=RecommendationResponse)
+def update_recommendation(rec_id: int, rec_update: RecommendationUpdate, db: Session = Depends(get_db)):
+    rec = db.query(Recommendation).filter(Recommendation.id == rec_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Recommendation not found")
+    rec.status = rec_update.status
+    db.commit()
+    db.refresh(rec)
+    return rec
+
+
 @app.get("/api/analysis/{user_id}", response_model=AnalysisResponse)
 def get_analysis(user_id: int, db: Session = Depends(get_db)):
     # Retrieve the questionnaire response for the given user_id
