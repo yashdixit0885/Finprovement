@@ -75,6 +75,14 @@ class QuestionnaireResponse(BaseModel):
 
     class Config:
         orm_mode = True
+        
+
+class AnalysisResponse(BaseModel):
+    user_id: int
+    summary: str
+    risk_score: int
+    investment_recommendation: str
+
 
 
 # ----- FastAPI App Initialization -----
@@ -142,3 +150,40 @@ def get_questionnaire(user_id: int, db: Session = Depends(get_db)):
     if not db_q:
         raise HTTPException(status_code=404, detail="Questionnaire not found")
     return db_q
+
+@app.get("/api/analysis/{user_id}", response_model=AnalysisResponse)
+@app.get("/api/analysis/{user_id}", response_model=AnalysisResponse)
+def get_analysis(user_id: int, db: Session = Depends(get_db)):
+    # Retrieve the questionnaire response for the given user_id
+    questionnaire = db.query(Questionnaire).filter(Questionnaire.user_id == user_id).first()
+    if not questionnaire:
+        raise HTTPException(status_code=404, detail="Questionnaire not found")
+    
+    # Create a basic summary
+    summary = (
+        f"Based on your goal of '{questionnaire.investment_goal}', "
+        f"your savings habit is '{questionnaire.savings_habit}', "
+        f"and your risk tolerance is '{questionnaire.risk_tolerance}'."
+    )
+    
+    # Compute a simple risk score and recommendation based on risk tolerance
+    risk_tolerance = questionnaire.risk_tolerance.lower()
+    if risk_tolerance == "high":
+        risk_score = 80
+        investment_recommendation = "We recommend an aggressive strategy focused on high-growth equities."
+    elif risk_tolerance == "medium":
+        risk_score = 50
+        investment_recommendation = "A balanced portfolio with a mix of equities and bonds is suitable for you."
+    else:
+        risk_score = 20
+        investment_recommendation = "A conservative strategy focusing on fixed income and blue-chip stocks is advised."
+
+    # Append the recommendation to the summary
+    full_summary = summary + " " + investment_recommendation
+
+    return AnalysisResponse(
+        user_id=user_id,
+        summary=full_summary,
+        risk_score=risk_score,
+        investment_recommendation=investment_recommendation
+    )

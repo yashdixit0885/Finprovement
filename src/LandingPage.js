@@ -1,6 +1,7 @@
 // src/LandingPage.js
 import React from 'react';
 import './LandingPage.css';
+import { Link } from 'react-router-dom';
 import heroBackground from './images/hero-background.jpg';
 import analysisIcon from './images/analysis-icon.png';
 import planIcon from './images/plan-icon.png';
@@ -16,9 +17,11 @@ return (
         style={{ backgroundImage: `url(${heroBackground})` }}
     >
         <div className="hero-content">
-        <h1>Your AI-Powered Financial Advisor</h1>
+        <h1>Finprovement AI</h1>
         <p>Transforming financial guidance with personalized insights and cutting-edge technology.</p>
-        <button onClick={() => alert('CTA: Get Started!')}>Get Started</button>
+        <Link to="/register">
+            <button>Get Started</button>
+        </Link>
         </div>
     </section>
 
@@ -64,9 +67,12 @@ return (
     </section>
 
     {/* Call-to-Action Section */}
+
     <section className="cta-section">
         <h2>Ready to Transform Your Finances?</h2>
-        <button onClick={() => alert('CTA: Sign Up Now!')}>Sign Up Now</button>
+        <Link to="/register">
+        <button>Sign Up Now</button>
+        </Link>
     </section>
 
     {/* Footer Section */}

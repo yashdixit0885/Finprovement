@@ -1,0 +1,51 @@
+/* src/NavBar.css */
+.navbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: transparent !important;
+    border: none;
+    box-shadow: none;
+    padding: 10px 20px;
+    z-index: 1000;
+}
+
+.navbar ul {
+    list-style-type: none;
+    display: flex;
+    justify-content: space-around;
+    margin: 0;
+    padding: 0;
+}
+
+.navbar li {
+    margin: 0 10px;
+}
+
+/* Style for nav links */
+.navbar a {
+    text-decoration: none;
+    color: blue;
+    font-weight: bold;
+}
+
+.navbar a:hover {
+    color: #f1c40f;
+}
+
+/* Style for logout button to match nav links */
+.navbar li button.logout-button {
+    background: none;
+    border: none;
+    color: blue;
+    font-weight: bold;
+    font-size: 1em;
+    cursor: pointer;
+    padding: 0;
+}
+
+.navbar li button.logout-button:hover {
+    text-decoration: underline;
+    color: #f1c40f;
+}
