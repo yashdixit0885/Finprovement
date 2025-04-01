@@ -6,7 +6,8 @@ import NavBar from './NavBar';
 import LandingPage from './LandingPage';
 import RegisterForm from './RegisterForm';
 import LoginForm from './LoginForm';
-import OnboardingQuestionnaire from './OnboardingQuestionnaire';
+import UserProfile from './UserProfile';
+import OnboardingForm from './OnboardingForm';
 import AnalysisDashboard from './AnalysisDashboard';
 import RecommendationsDashboard from './RecommendationsDashboard';
 import ProgressTracker from './ProgressTracker';
@@ -21,7 +22,8 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/register" element={<RegisterForm />} />
           <Route path="/login" element={<LoginForm />} />
-          <Route path="/onboarding" element={<OnboardingQuestionnaire />} />
+          <Route path="/user-profile" element={<UserProfile />} />
+          <Route path="/onboarding" element={<OnboardingForm />} />
           <Route path="/analysis" element={<AnalysisDashboard />} />
           <Route path="/recommendations" element={<RecommendationsDashboard />} />
           <Route path="/progress" element={<ProgressTracker />} />

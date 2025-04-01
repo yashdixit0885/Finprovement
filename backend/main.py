@@ -1,26 +1,31 @@
 # backend/main.py
+import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, or_
+from sqlalchemy import create_engine, Column, Integer, String, or_, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
 from pydantic import BaseModel
-from sqlalchemy import ForeignKey
 
-# ----- Database Setup -----
-SQLALCHEMY_DATABASE_URL = "sqlite:///./users.db"  # Using SQLite for simplicity
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+
+
+# --- Database Setup ---
+SQLALCHEMY_DATABASE_URL = "sqlite:///./users.db"  # SQLite for development
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# ----- Password Hashing Setup -----
+# --- Password Hashing Setup ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# ====== Database Models =======
+# --- Database Models ---
 
-# ----- User Model -----
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -28,46 +33,45 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
 
-# ----- Questionnaire Model -----
-
 class Questionnaire(Base):
     __tablename__ = "questionnaires"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)  # Ideally, use ForeignKey('users.id') in a full implementation
+    user_id = Column(Integer, index=True)  # Ideally, ForeignKey("users.id")
     investment_goal = Column(String)
     savings_habit = Column(String)
     risk_tolerance = Column(String)
 
-# ----- Recommendation Model -----
+# Recommendation model (from previous vertical slices)
 class Recommendation(Base):
     __tablename__ = "recommendations"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)  # In a full app, use ForeignKey('users.id')
+    user_id = Column(Integer, index=True)
     description = Column(String)
-    status = Column(String, default="pending")  # Values: "pending", "in_progress", "complete"
+    status = Column(String, default="pending")
 
-
-# Create the database tables
+# Create all tables
 Base.metadata.create_all(bind=engine)
 
-# ----- Pydantic Models -----
+# --- Pydantic Models ---
+
+# For User Registration/Login
 class UserCreate(BaseModel):
     email: str
     username: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
     password: str
 
 class UserResponse(BaseModel):
     id: int
     email: str
     username: str
-
     class Config:
         orm_mode = True
 
-class UserLogin(BaseModel):
-    email: str
-    password: str
-    
+# For Questionnaire (existing)
 class QuestionnaireCreate(BaseModel):
     user_id: int
     investment_goal: str
@@ -80,17 +84,10 @@ class QuestionnaireResponse(BaseModel):
     investment_goal: str
     savings_habit: str
     risk_tolerance: str
-
     class Config:
         orm_mode = True
-        
 
-class AnalysisResponse(BaseModel):
-    user_id: int
-    summary: str
-    risk_score: int
-    investment_recommendation: str
-
+# For Recommendations (existing)
 class RecommendationCreate(BaseModel):
     user_id: int
     description: str
@@ -100,35 +97,42 @@ class RecommendationResponse(BaseModel):
     user_id: int
     description: str
     status: str
-
     class Config:
         orm_mode = True
 
 class RecommendationUpdate(BaseModel):
-    status: str  # Allow updating the status
+    status: str
 
-class FinancialPlanResponse(BaseModel):
+# New Pydantic Model for User Profile (for AI Onboarding)
+class UserProfile(BaseModel):
+    full_name: str
+    age: int
+    sex: str
+    tax_status: str
+    state: str
+    city: str
+
+# Model for AI responses (can be used for analysis, financial plan, progress)
+class AIResponse(BaseModel):
+    response: str
+
+# Model for Onboarding Data input to AI Analysis Agent
+class OnboardingData(BaseModel):
     user_id: int
-    budget_plan: str
-    investment_strategy: str
-    retirement_plan: str
-    tax_plan: str
+    answers: str  # This could be a JSON string or a plain text summary of answers
 
-
-
-# ----- FastAPI App Initialization -----
+# --- FastAPI App Initialization ---
 app = FastAPI()
 
-# Allow CORS for local development (adjust allowed origins as needed)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # our React app runs on port 3000
+    allow_origins=["http://localhost:3000"],  # Adjust as needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Dependency to get DB session
+# Dependency for DB session
 def get_db():
     db = SessionLocal()
     try:
@@ -143,15 +147,56 @@ def get_password_hash(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-# ----- API Endpoints -----
+# --- AI Agent Integration using LangChain and Hugging Face ---
+from langchain.llms import HuggingFaceHub
 
+llm = HuggingFaceHub(
+    repo_id="Qwen/QwQ-32B",  # Change to your desired model
+    model_kwargs={"temperature": 0.7},
+    huggingfacehub_api_token=HUGGINGFACE_API_KEY  # Use the key loaded from .env
+)
+
+
+def generate_onboarding_questions(user_profile: str) -> str:
+    prompt = (
+        f"You are a financial advisor. Based on the following user profile: {user_profile}, "
+        "generate a list of personalized onboarding questions for financial planning."
+    )
+    response = llm(prompt)
+    return response
+
+def generate_analysis_report(onboarding_data: str) -> str:
+    prompt = (
+        f"Given the following onboarding data for a financial planning client: {onboarding_data}, "
+        "produce a detailed financial analysis report including recommendations."
+    )
+    response = llm(prompt)
+    return response
+
+def generate_financial_plan(analysis_data: str) -> str:
+    prompt = (
+        f"Based on the following financial analysis report: {analysis_data}, "
+        "generate a comprehensive financial plan including budget, investment, retirement, and tax strategies."
+    )
+    response = llm(prompt)
+    return response
+
+def generate_progress_insights(progress_data: str) -> str:
+    prompt = (
+        f"Given the user's progress data: {progress_data}, "
+        "provide insights and recommendations for improving progress towards their financial goals."
+    )
+    response = llm(prompt)
+    return response
+
+# --- API Endpoints ---
+
+# Registration Endpoint
 @app.post("/api/register", response_model=UserResponse)
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    # Check if a user with the same email or username exists
     existing_user = db.query(User).filter(or_(User.email == user.email, User.username == user.username)).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email or username already registered")
-    
     hashed_password = get_password_hash(user.password)
     db_user = User(email=user.email, username=user.username, hashed_password=hashed_password)
     db.add(db_user)
@@ -159,14 +204,15 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
     return db_user
 
+# Login Endpoint
 @app.post("/api/login", response_model=UserResponse)
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    # Find the user by email
     db_user = db.query(User).filter(User.email == user.email).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     return db_user
 
+# Questionnaire Endpoints (existing)
 @app.post("/api/questionnaire", response_model=QuestionnaireResponse)
 def create_questionnaire(q: QuestionnaireCreate, db: Session = Depends(get_db)):
     db_q = Questionnaire(**q.dict())
@@ -182,7 +228,7 @@ def get_questionnaire(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Questionnaire not found")
     return db_q
 
-# Create a new recommendation (for testing or admin purposes)
+# Recommendations Endpoints (existing)
 @app.post("/api/recommendations", response_model=RecommendationResponse)
 def create_recommendation(rec: RecommendationCreate, db: Session = Depends(get_db)):
     db_rec = Recommendation(**rec.dict())
@@ -191,13 +237,11 @@ def create_recommendation(rec: RecommendationCreate, db: Session = Depends(get_d
     db.refresh(db_rec)
     return db_rec
 
-# Get all recommendations for a user
 @app.get("/api/recommendations/{user_id}", response_model=list[RecommendationResponse])
 def get_recommendations(user_id: int, db: Session = Depends(get_db)):
     recs = db.query(Recommendation).filter(Recommendation.user_id == user_id).all()
     return recs
 
-# Update a recommendation's status
 @app.put("/api/recommendations/{rec_id}", response_model=RecommendationResponse)
 def update_recommendation(rec_id: int, rec_update: RecommendationUpdate, db: Session = Depends(get_db)):
     rec = db.query(Recommendation).filter(Recommendation.id == rec_id).first()
@@ -208,94 +252,41 @@ def update_recommendation(rec_id: int, rec_update: RecommendationUpdate, db: Ses
     db.refresh(rec)
     return rec
 
+# --- New AI Agent Endpoints ---
 
-@app.get("/api/analysis/{user_id}", response_model=AnalysisResponse)
-def get_analysis(user_id: int, db: Session = Depends(get_db)):
-    # Retrieve the questionnaire response for the given user_id
-    questionnaire = db.query(Questionnaire).filter(Questionnaire.user_id == user_id).first()
-    if not questionnaire:
-        raise HTTPException(status_code=404, detail="Questionnaire not found")
-    
-    # Create a basic summary
-    summary = (
-        f"Based on your goal of '{questionnaire.investment_goal}', "
-        f"your savings habit is '{questionnaire.savings_habit}', "
-        f"and your risk tolerance is '{questionnaire.risk_tolerance}'."
-    )
-    
-    # Compute a simple risk score and recommendation based on risk tolerance
-    risk_tolerance = questionnaire.risk_tolerance.lower()
-    if risk_tolerance == "high":
-        risk_score = 80
-        investment_recommendation = "We recommend an aggressive strategy focused on high-growth equities."
-    elif risk_tolerance == "medium":
-        risk_score = 50
-        investment_recommendation = "A balanced portfolio with a mix of equities and bonds is suitable for you."
-    else:
-        risk_score = 20
-        investment_recommendation = "A conservative strategy focusing on fixed income and blue-chip stocks is advised."
+# 1. AI Onboarding Agent Endpoint: Generate personalized onboarding questions
+@app.post("/api/ai-onboarding", response_model=AIResponse)
+def ai_onboarding(profile: UserProfile):
+    profile_str = f"{profile.full_name}, {profile.age} years old, {profile.sex}, tax status: {profile.tax_status}, located in {profile.city}, {profile.state}"
+    try:
+        questions = generate_onboarding_questions(profile_str)
+        return AIResponse(response=questions)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    # Append the recommendation to the summary
-    full_summary = summary + " " + investment_recommendation
+# 2. AI Analysis Agent Endpoint: Generate analysis report from onboarding data
+@app.post("/api/ai-analysis", response_model=AIResponse)
+def ai_analysis(onboarding: OnboardingData):
+    try:
+        analysis = generate_analysis_report(onboarding.answers)
+        return AIResponse(response=analysis)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    return AnalysisResponse(
-        user_id=user_id,
-        summary=full_summary,
-        risk_score=risk_score,
-        investment_recommendation=investment_recommendation
-    )
-    
-@app.get("/api/financial-plan/{user_id}", response_model=FinancialPlanResponse)
-def get_financial_plan(user_id: int, db: Session = Depends(get_db)):
-    # Retrieve the questionnaire response for the given user_id
-    questionnaire = db.query(Questionnaire).filter(Questionnaire.user_id == user_id).first()
-    if not questionnaire:
-        raise HTTPException(status_code=404, detail="Questionnaire not found")
-    
-    # Generate a basic budget plan based on savings habit
-    budget_plan = (
-        "We recommend that you allocate at least 20% of your income towards savings. "
-        "Based on your reported habit of '{}' savings, consider setting a monthly savings goal."
-    ).format(questionnaire.savings_habit)
-    
-    # Generate an investment strategy based on risk tolerance
-    risk_tol = questionnaire.risk_tolerance.lower()
-    if risk_tol == "high":
-        investment_strategy = (
-            "Given your high risk tolerance, we suggest an aggressive investment strategy with "
-            "a higher allocation (around 70%) to equities, focusing on growth stocks and emerging markets."
-        )
-    elif risk_tol == "low":
-        investment_strategy = (
-            "With a low risk tolerance, a conservative approach is advised. "
-            "Consider allocating a larger portion (around 70%) to bonds and blue-chip stocks."
-        )
-    else:
-        investment_strategy = (
-            "For a medium risk tolerance, a balanced portfolio with approximately 50% equities and 50% bonds "
-            "is recommended."
-        )
-    
-    # Generate a retirement plan suggestion based on investment goal
-    if "retirement" in questionnaire.investment_goal.lower():
-        retirement_plan = (
-            "Since your primary goal is retirement savings, it is important to contribute consistently "
-            "to retirement accounts (e.g., 401(k), IRA) and consider compound interest benefits over time."
-        )
-    else:
-        retirement_plan = (
-            "Consider planning for long-term goals by diversifying your investment portfolio and saving consistently."
-        )
-    
-    # A generic tax plan recommendation
-    tax_plan = (
-        "Maximize contributions to tax-advantaged accounts and consider consulting a tax advisor to optimize your deductions."
-    )
-    
-    return FinancialPlanResponse(
-        user_id=user_id,
-        budget_plan=budget_plan,
-        investment_strategy=investment_strategy,
-        retirement_plan=retirement_plan,
-        tax_plan=tax_plan,
-    )
+# 3. AI Financial Plan Agent Endpoint: Generate personalized financial plan from analysis
+@app.post("/api/ai-financial-plan", response_model=AIResponse)
+def ai_financial_plan(analysis: AIResponse):
+    try:
+        plan = generate_financial_plan(analysis.response)
+        return AIResponse(response=plan)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 4. AI Progress Tracker Agent Endpoint: Generate insights from progress data
+@app.post("/api/ai-progress", response_model=AIResponse)
+def ai_progress(progress: AIResponse):
+    try:
+        insights = generate_progress_insights(progress.response)
+        return AIResponse(response=insights)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

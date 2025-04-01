@@ -18,22 +18,24 @@ const AnalysisDashboard = () => {
 const [analysis, setAnalysis] = useState(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState(null);
-const userId = 1; // For testing; in a real app, derive from auth context
+const userId = 1; // For testing; replace with authenticated user id
 
 useEffect(() => {
-    fetch(`http://127.0.0.1:8000/api/analysis/${userId}`)
+    // For this example, assume onboarding data has been submitted and AI analysis is ready
+    // You might instead call the static endpoint or use context
+    fetch(`http://127.0.0.1:8000/api/ai-analysis`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, answers: "User's onboarding answers" })
+    })
     .then((response) => {
         if (!response.ok) {
-        // If status is 404, it might be that the questionnaire hasn't been completed yet.
-        if (response.status === 404) {
-            throw new Error("Questionnaire not found");
-        }
-        throw new Error("Error fetching analysis");
+        throw new Error("Error fetching AI analysis");
         }
         return response.json();
     })
     .then((data) => {
-        setAnalysis(data);
+        setAnalysis(data.response);
         setLoading(false);
     })
     .catch((err) => {
@@ -43,34 +45,19 @@ useEffect(() => {
 }, [userId]);
 
 if (loading) {
-    return <p>Loading analysis...</p>;
+    return <p>Loading AI analysis...</p>;
 }
-
 if (error) {
-    if (error.includes("Questionnaire not found")) {
-    return (
-        <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto', textAlign: 'center' }}>
-        <h2>No Analysis Available</h2>
-        <p>
-            It looks like you haven't completed your onboarding questionnaire yet.
-        </p>
-        <p>
-            Please <Link to="/onboarding">complete your onboarding</Link> to get your personalized financial analysis.
-        </p>
-        </div>
-    );
-    } else {
     return <p>Error: {error}</p>;
-    }
 }
 
-// Prepare chart data using the risk score from analysis
+// (For charting, you could extract a risk score from the response if your AI agent returns it)
 const chartData = {
     labels: ['Risk Score'],
     datasets: [
     {
         label: 'Risk Score',
-        data: [analysis.risk_score],
+        data: [50], // Placeholder, adjust if AI returns a numeric value
         backgroundColor: 'rgba(52, 152, 219, 0.5)',
     },
     ],
@@ -79,26 +66,19 @@ const chartData = {
 const chartOptions = {
     responsive: true,
     plugins: {
-    legend: {
-        position: 'top',
-    },
-    title: {
-        display: true,
-        text: 'Your Risk Score',
-    },
+    legend: { position: 'top' },
+    title: { display: true, text: 'Your Risk Score' },
     },
 };
 
 return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: 'auto' }}>
-    <h2>Your Financial Analysis</h2>
-    <p>{analysis.summary}</p>
-    <p>
-        <strong>Investment Recommendation:</strong> {analysis.investment_recommendation}
-    </p>
+    <h2>Your AI-Generated Financial Analysis</h2>
+    <p>{analysis}</p>
     <div style={{ marginTop: '40px' }}>
         <Bar data={chartData} options={chartOptions} />
     </div>
+    <p>If you would like to refine your plan, please <Link to="/onboarding">update your onboarding data</Link>.</p>
     </div>
 );
 };
