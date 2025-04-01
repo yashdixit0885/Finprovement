@@ -9,6 +9,8 @@ import LoginForm from './LoginForm';
 import OnboardingQuestionnaire from './OnboardingQuestionnaire';
 import AnalysisDashboard from './AnalysisDashboard';
 import RecommendationsDashboard from './RecommendationsDashboard';
+import ProgressTracker from './ProgressTracker';
+import FinancialPlan from './FinancialPlan';
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
           <Route path="/onboarding" element={<OnboardingQuestionnaire />} />
           <Route path="/analysis" element={<AnalysisDashboard />} />
           <Route path="/recommendations" element={<RecommendationsDashboard />} />
+          <Route path="/progress" element={<ProgressTracker />} />
+          <Route path="/financial-plan" element={<FinancialPlan />} />
         </Routes>
       </Router>
     </AuthProvider>

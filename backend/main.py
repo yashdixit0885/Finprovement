@@ -107,6 +107,14 @@ class RecommendationResponse(BaseModel):
 class RecommendationUpdate(BaseModel):
     status: str  # Allow updating the status
 
+class FinancialPlanResponse(BaseModel):
+    user_id: int
+    budget_plan: str
+    investment_strategy: str
+    retirement_plan: str
+    tax_plan: str
+
+
 
 # ----- FastAPI App Initialization -----
 app = FastAPI()
@@ -235,4 +243,59 @@ def get_analysis(user_id: int, db: Session = Depends(get_db)):
         summary=full_summary,
         risk_score=risk_score,
         investment_recommendation=investment_recommendation
+    )
+    
+@app.get("/api/financial-plan/{user_id}", response_model=FinancialPlanResponse)
+def get_financial_plan(user_id: int, db: Session = Depends(get_db)):
+    # Retrieve the questionnaire response for the given user_id
+    questionnaire = db.query(Questionnaire).filter(Questionnaire.user_id == user_id).first()
+    if not questionnaire:
+        raise HTTPException(status_code=404, detail="Questionnaire not found")
+    
+    # Generate a basic budget plan based on savings habit
+    budget_plan = (
+        "We recommend that you allocate at least 20% of your income towards savings. "
+        "Based on your reported habit of '{}' savings, consider setting a monthly savings goal."
+    ).format(questionnaire.savings_habit)
+    
+    # Generate an investment strategy based on risk tolerance
+    risk_tol = questionnaire.risk_tolerance.lower()
+    if risk_tol == "high":
+        investment_strategy = (
+            "Given your high risk tolerance, we suggest an aggressive investment strategy with "
+            "a higher allocation (around 70%) to equities, focusing on growth stocks and emerging markets."
+        )
+    elif risk_tol == "low":
+        investment_strategy = (
+            "With a low risk tolerance, a conservative approach is advised. "
+            "Consider allocating a larger portion (around 70%) to bonds and blue-chip stocks."
+        )
+    else:
+        investment_strategy = (
+            "For a medium risk tolerance, a balanced portfolio with approximately 50% equities and 50% bonds "
+            "is recommended."
+        )
+    
+    # Generate a retirement plan suggestion based on investment goal
+    if "retirement" in questionnaire.investment_goal.lower():
+        retirement_plan = (
+            "Since your primary goal is retirement savings, it is important to contribute consistently "
+            "to retirement accounts (e.g., 401(k), IRA) and consider compound interest benefits over time."
+        )
+    else:
+        retirement_plan = (
+            "Consider planning for long-term goals by diversifying your investment portfolio and saving consistently."
+        )
+    
+    # A generic tax plan recommendation
+    tax_plan = (
+        "Maximize contributions to tax-advantaged accounts and consider consulting a tax advisor to optimize your deductions."
+    )
+    
+    return FinancialPlanResponse(
+        user_id=user_id,
+        budget_plan=budget_plan,
+        investment_strategy=investment_strategy,
+        retirement_plan=retirement_plan,
+        tax_plan=tax_plan,
     )

@@ -9,10 +9,7 @@ const { isAuthenticated, setIsAuthenticated } = useContext(AuthContext);
 const navigate = useNavigate();
 
 const handleLogout = () => {
-    // Update the authentication state to false
     setIsAuthenticated(false);
-    // Optionally, clear any stored authentication tokens here
-    // Redirect the user to the home page after logging out
     navigate('/');
 };
 
@@ -24,7 +21,12 @@ return (
         <>
             <li><Link to="/onboarding">Onboarding</Link></li>
             <li><Link to="/analysis">Analysis</Link></li>
-            <li><button onClick={handleLogout} className="logout-button">Logout</button></li>
+            <li><Link to="/progress">Progress</Link></li>
+            <li>
+            <button onClick={handleLogout} className="logout-button">
+                Logout
+            </button>
+            </li>
         </>
         ) : (
         <>

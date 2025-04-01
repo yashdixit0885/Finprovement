@@ -1,0 +1,37 @@
+/* src/FinancialPlan.css */
+.financial-plan-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+}
+
+.financial-plan-container h2 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.financial-plan-container section {
+    margin-bottom: 20px;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.financial-plan-container section:last-child {
+    border-bottom: none;
+}
+
+.financial-plan-container h3 {
+    color: #3498db;
+    margin-bottom: 5px;
+}
+
+.financial-plan-container p {
+    font-size: 1em;
+    line-height: 1.5;
+    color: #555;
+}
