@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './AuthForms.css';
+import loadingGif from './images/loading.gif'; // Import the GIF from your assets folder
+
 
 const UserProfile = () => {
 const [fullName, setFullName] = useState("");
@@ -105,7 +107,16 @@ return (
     {isLoading && (
         <div className="loading-container">
         <p>Generating your personalized onboarding questions...</p>
-        <img src="/images/loading.gif" alt="Loading" />
+        <img
+            src={loadingGif}
+            alt="Loading"
+            style={{ 
+                animation: 'none',
+                transform: 'none',
+                width: '50px', /* Adjust as needed */
+                height: 'auto'
+            }} 
+            />
         </div>
     )}
     {message && <p>{message}</p>}
